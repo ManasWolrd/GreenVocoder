@@ -7,3 +7,6 @@
 [submodule "src/pluginshared"]
 	path = src/pluginshared
 	url = https://github.com/ManasWolrd/pluginshared.git
+[submodule "libs/qwqdsp"]
+	path = libs/qwqdsp
+	url = https://github.com/ManasWolrd/qwqdsp.git

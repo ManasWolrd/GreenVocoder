@@ -4,9 +4,9 @@ cmake_minimum_required(VERSION 3.22.1)
 # 插件信息，改了记得改src/global.hpp
 # ----------------------------------------
 set(TEAM_NAME ManasWorld)
-set(PLUGIN_REPO_URL "https://github.com/ManasWorld/plugin-template")
-set(PLUGIN_NAME plugin-template)
-set(PLUGIN_VERSION 0.0.1)
+set(PLUGIN_REPO_URL "https://github.com/ManasWorld/GreenVocoder")
+set(PLUGIN_NAME GreenVocoder)
+set(PLUGIN_VERSION 0.2.3)
 set(PLUGIN_BUNDLE_ID "com.manasworld.${PLUGIN_NAME}")
 
 option(BUILD_STANDALONE "Build Standalone plugin format" ON)
@@ -158,4 +158,14 @@ else()
         target_link_libraries(audiofft PUBLIC ${IPP_LIBRARIES})
         target_compile_definitions(audiofft PRIVATE AUDIOFFT_INTEL_IPP)
     endif()
+endif()
+
+# ----------------------------------------
+# qwqdsp
+# ----------------------------------------
+add_subdirectory(libs/qwqdsp)
+target_link_libraries(${PROJECT_NAME} PUBLIC qwqdsp)
+
+if(DEFINED DBUILD_IN_CI)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE DBUILD_IN_CI=1)
 endif()

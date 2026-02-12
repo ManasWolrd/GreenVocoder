@@ -1,8 +1,8 @@
 #include "PluginEditor.h"
-
 #include "PluginProcessor.h"
+#include "param_ids.hpp"
 
-struct EmptyAudioProcessorEditor::PluginConfig {
+struct AudioPluginAudioProcessorEditor::PluginConfig {
     PluginConfig() {
         juce::PropertiesFile::Options options;
         options.applicationName = JucePlugin_Name;
@@ -16,18 +16,15 @@ struct EmptyAudioProcessorEditor::PluginConfig {
     std::unique_ptr<juce::PropertiesFile> config;
 };
 
-// -------------------- plugin editor --------------------
-
-EmptyAudioProcessorEditor::EmptyAudioProcessorEditor(EmptyAudioProcessor& p)
+//==============================================================================
+AudioPluginAudioProcessorEditor::AudioPluginAudioProcessorEditor(AudioPluginAudioProcessor& p)
     : AudioProcessorEditor(&p)
     , ui_(p) {
     auto* props = plugin_config_->config.get();
 
     addAndMakeVisible(ui_);
     if (props != nullptr) {
-        float scale_x = static_cast<float>(props->getDoubleValue("scale_x", 1.0));
-        float scale_y = static_cast<float>(props->getDoubleValue("scale_y", 1.0));
-        setSize(static_cast<int>(ui_.kWidth * scale_x), static_cast<int>(ui_.kHeight * scale_y));
+        setSize(props->getIntValue("last_width", ui_.kWidth), props->getIntValue("last_height", ui_.kHeight));
     }
     else {
         setSize(ui_.kWidth, ui_.kHeight);
@@ -37,15 +34,11 @@ EmptyAudioProcessorEditor::EmptyAudioProcessorEditor(EmptyAudioProcessor& p)
     setResizeLimits(ui_.kWidth, ui_.kHeight, 9999, 9999);
 }
 
-EmptyAudioProcessorEditor::~EmptyAudioProcessorEditor() {
-}
+AudioPluginAudioProcessorEditor::~AudioPluginAudioProcessorEditor() {}
 
 //==============================================================================
-void EmptyAudioProcessorEditor::paint(juce::Graphics& g) {
-    g.fillAll(ui::green_bg);
-}
 
-void EmptyAudioProcessorEditor::resized() {
+void AudioPluginAudioProcessorEditor::resized() {
     float scaleX = static_cast<float>(getWidth()) / ui_.kWidth;
     float scaleY = static_cast<float>(getHeight()) / ui_.kHeight;
     ui_.setTransform(juce::AffineTransform::scale(scaleX, scaleY));
@@ -53,8 +46,8 @@ void EmptyAudioProcessorEditor::resized() {
 
     if (auto* props = plugin_config_->config.get()) {
         if (getWidth() > 0 && getHeight() > 0) {
-            props->setValue("scale_x", scaleX);
-            props->setValue("scale_y", scaleY);
+            props->setValue("last_width", getWidth());
+            props->setValue("last_height", getHeight());
         }
     }
 }
