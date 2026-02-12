@@ -1,7 +1,22 @@
-# plugin template
-或许是吧, visual studio/vs code/clion直接打开这个文件夹等cmake配置就行了.  
+# Green Vocoder  
 
-推荐使用Ninja和clang/GCC编译器, 优化比MSVC好很多.  
+multiple algorithms vocoder
+
+## features
+
+- Leaky Burg LPC
+- Block Burg LPC
+- MFCC(not a real)
+- Channel Vocoder
+- STFT Vocoder
+
+> [!WARNING]
+> The Elliptic filter bank may generate a click when scale/carry_scale goes across 1.0.  
+
+## GUI
+
+![GUI](docs/gui.png)
+
 
 # 克隆到本地
 ```bash
