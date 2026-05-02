@@ -774,6 +774,7 @@ void AudioPluginAudioProcessor::setStateInformation(const void* data, int sizeIn
         }
     }
 
+    reset();
     suspendProcessing(false);
 }
 
