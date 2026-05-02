@@ -144,6 +144,6 @@ endif()
 add_subdirectory(libs/qwqdsp)
 target_link_libraries(${PROJECT_NAME} PUBLIC qwqdsp)
 
-if(DEFINED DBUILD_IN_CI)
-    target_compile_definitions(${PROJECT_NAME} PRIVATE DBUILD_IN_CI=1)
+if(BUILD_IN_CI)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC BUILD_IN_CI=1)
 endif()
