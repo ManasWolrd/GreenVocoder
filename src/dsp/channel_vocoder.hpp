@@ -284,13 +284,11 @@ public:
     static constexpr int kMinOrder = 4;
 
     enum class FilterBankMode {
-        StackButterworth12,
+        Bandpass12,
         StackButterworth24,
         StackButterworth36,
-        FlatButterworth12,
         FlatButterworth24,
         FlatButterworth36,
-        Chebyshev12,
         Chebyshev24,
         Chebyshev36,
         Elliptic24,
@@ -315,6 +313,7 @@ public:
     void SetFilterBankMode(FilterBankMode mode);
     void SetGate(float db);
     void SetFormantShift(float shift);
+    void SetFilterRipple(float ripple);
 
     int GetNumBins() const { return num_bans_; }
     qwqdsp_simd_element::PackFloat<2> GetBinPeak(size_t idx) const {
@@ -352,6 +351,7 @@ private:
     float carry_scale_{1.0f};
     float attack_ms_{};
     float release_ms_{};
+    float filter_ripple_{1.0f};
     eChannelVocoderMap map_{};
     std::array<std::pair<CascadeBPSVF, CascadeBPSVF>, kMaxOrder> filters_;
     std::array<qwqdsp_simd_element::PackFloat<4>[2], kMaxOrder> main_peaks_{};

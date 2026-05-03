@@ -45,7 +45,7 @@ void STFTVocoder::resized() {
     blend_.setBounds(top.removeFromLeft(50));
     size_.setBounds(top.removeFromLeft(100).withSizeKeepingCentre(100, 30));
     top.removeFromLeft(4);
-    use_v2_.setBounds(top.removeFromLeft(50).withSizeKeepingCentre(50, 30));
+    use_v2_.setBounds(top.removeFromLeft(80).withSizeKeepingCentre(80, 30));
     detail_.setBounds(top.removeFromLeft(50).withSizeKeepingCentre(50, 65));
 }
 

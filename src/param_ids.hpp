@@ -79,6 +79,7 @@ static constexpr auto kChannelVocoderCarryScale = "cv_carry_scale";
 static constexpr auto kChannelVocoderMap = "cv_map";
 static constexpr auto kChannelVocoderFilterBankMode = "cv_fbank_mode";
 static constexpr auto kChannelVocoderGate = "cv_gate";
+static constexpr auto kChannelVocoderRipple = "cv_ripple";
 
 static constexpr auto kTrackingLow = "track_low";
 static constexpr auto kTrackingHigh = "track_high";

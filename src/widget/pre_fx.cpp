@@ -13,15 +13,24 @@ PreFx::PreFx(AudioPluginAudioProcessor& p) {
     addAndMakeVisible(main_route_);
     side_route_.BindParam(apvts, id::kSideChannelConfig);
     addAndMakeVisible(side_route_);
+
+    addAndMakeVisible(main_route_title_);
+    addAndMakeVisible(side_route_title_);
+    ui::SetLableBlack(main_route_title_);
+    ui::SetLableBlack(side_route_title_);
 }
 
 void PreFx::resized() {
     auto b = getLocalBounds();
     title_.setBounds(b.removeFromTop(20));
 
+    b.removeFromLeft(80);
     auto channel_bound = b.removeFromLeft(100);
-    main_route_.setBounds(channel_bound.removeFromTop(channel_bound.getHeight() / 2));
-    side_route_.setBounds(channel_bound);
+    main_route_.setBounds(channel_bound.removeFromTop(channel_bound.getHeight() / 2).reduced(2));
+    side_route_.setBounds(channel_bound.reduced(2));
+
+    main_route_title_.setBounds(main_route_.getBounds().translated(-80, 0));
+    side_route_title_.setBounds(side_route_.getBounds().translated(-80, 0));
 
     tilt_.setBounds(b.removeFromLeft(50).withHeight(65));
 }

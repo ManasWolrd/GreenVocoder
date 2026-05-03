@@ -4,8 +4,9 @@
 #include <array>
 #include <memory>
 
-#include "param_ids.hpp"
 #include "global.hpp"
+#include "param_ids.hpp"
+
 
 #if BUILD_IN_CI
 #define I_AM_USING_LOOPBACK_DEBUG 0
@@ -86,9 +87,8 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto p = std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID{id::kChannelVocoderFilterBankMode, 1}, id::kChannelVocoderFilterBankMode,
-            juce::StringArray{"stack butterworth 12", "stack butterworth 24", "stack butterworth 36",
-                              "flat butterworth 12", "flat butterworth 24", "flat butterworth 36", "chebyshev 12",
-                              "chebyshev 24", "chebyshev 36", "Elliptic 24", "Elliptic 36"},
+            juce::StringArray{"bandpass 12", "stack butterworth 24", "stack butterworth 36", "flat butterworth 24",
+                              "flat butterworth 36", "chebyshev 24", "chebyshev 36", "Elliptic 24", "Elliptic 36"},
             1);
         paramListeners_.Add(p, [this](int mode) {
             juce::ScopedLock _{getCallbackLock()};
@@ -160,6 +160,15 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         paramListeners_.Add(p, [this](float v) {
             juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetModulatorScale(v);
+        });
+        layout.add(std::move(p));
+    }
+    {
+        auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderRipple, 1},
+                                                             id::kChannelVocoderRipple, 0.1f, 10.0f, 1.0f);
+        paramListeners_.Add(p, [this](float v) {
+            juce::ScopedLock _{getCallbackLock()};
+            channel_vocoder_.SetFilterRipple(v);
         });
         layout.add(std::move(p));
     }
@@ -303,7 +312,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kStftDetail, 1}, id::kStftDetail,
-                                                             0.01f, 1.0f, 0.15f);
+                                                             0.01f, 1.0f, 0.3f);
         paramListeners_.Add(p, [this](float omega) { stft_vocoder_.SetDetail(omega); });
         layout.add(std::move(p));
     }
@@ -338,7 +347,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID{id::kEnsembleRate, 1}, id::kEnsembleRate,
-            juce::NormalisableRange<float>(green_vocoder::dsp::Ensemble::kMinFrequency, 1.0f, 0.01f), 0.1f);
+            juce::NormalisableRange<float>(green_vocoder::dsp::Ensemble::kMinFrequency, 1.0f, 0.01f), 0.01f);
         paramListeners_.Add(p, [this](float rate) { ensemble_.SetRate(rate); });
         layout.add(std::move(p));
     }
@@ -390,9 +399,9 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
 
     value_tree_ = std::make_unique<juce::AudioProcessorValueTreeState>(*this, nullptr, kParameterValueTreeIdentify,
                                                                        std::move(layout));
-    preset_manager_ = std::make_unique<pluginshared::PresetManager>(*value_tree_, *this, pluginshared::UpdateData::GithubInfo{
-        global::kPluginRepoOwnerName, global::kPluginRepoName
-    });
+    preset_manager_ = std::make_unique<pluginshared::PresetManager>(
+        *value_tree_, *this,
+        pluginshared::UpdateData::GithubInfo{global::kPluginRepoOwnerName, global::kPluginRepoName});
 }
 
 AudioPluginAudioProcessor::~AudioPluginAudioProcessor() {
@@ -494,8 +503,7 @@ bool AudioPluginAudioProcessor::isBusesLayoutSupported(const BusesLayout& layout
     // In this template code we only support mono or stereo.
     // Some plugin hosts, such as certain GarageBand versions, will only
     // load plugins that support stereo bus layouts.
-    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo())
-        return false;
+    if (layouts.getMainOutputChannelSet() != juce::AudioChannelSet::stereo()) return false;
 
     // This checks if the input layout matches the output layout
 #if !JucePlugin_IsSynth

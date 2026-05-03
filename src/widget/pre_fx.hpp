@@ -13,5 +13,7 @@ private:
     ui::Dial tilt_{"tilt"};
     ui::FlatCombobox main_route_;
     ui::FlatCombobox side_route_;
+    juce::Label main_route_title_{"", "modulator"};
+    juce::Label side_route_title_{"", "carry"};
 };
 }

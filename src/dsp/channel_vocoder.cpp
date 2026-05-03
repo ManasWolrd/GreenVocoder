@@ -88,6 +88,11 @@ void ChannelVocoder::SetFormantShift(float shift) {
     UpdateFilters();
 }
 
+void ChannelVocoder::SetFilterRipple(float ripple) {
+    filter_ripple_ = ripple;
+    UpdateFilters();
+}
+
 // -------------------- frequency maps --------------------
 struct LogMap {
     static float FromFreq(float freq) {
@@ -162,21 +167,27 @@ void ChannelVocoder::UpdateFilters() {
 }
 
 // -------------------- filter designs --------------------
-struct StackButterworth12 {
+struct Bandpass12 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         auto f1 = qwqdsp_simd_element::PackOps::Tan(w1 * 0.5f) * analog_w_mul;
         auto f2 = qwqdsp_simd_element::PackOps::Tan(w2 * 0.5f) * analog_w_mul;
         auto f0 = qwqdsp_simd_element::PackOps::Sqrt(f1 * f2);
-        // this Q only works for a order4 bandpass to create -6dB gain
+        // // this Q only works for a order4 bandpass to create -6dB gain
         auto Q = f0 / qwqdsp_simd_element::PackOps::Abs(f2 - f1);
         svf.svf_[0].MakeBandpass(f0, Q, f0, Q);
+
+        // auto half_power = std::sqrt(std::numbers::sqrt2_v<float> / 2.0f);
+        // auto w_pow_2 = qwqdsp_simd_element::PackOps::X2(f1 / f0);
+        // auto Q = qwqdsp_simd_element::PackOps::Sqrt(w_pow_2 / half_power - w_pow_2)
+        //        / qwqdsp_simd_element::PackOps::Abs(w_pow_2 - 1.0f);
+        // svf.svf_[0].MakeBandpass(f0, Q, f0, Q);
     }
 };
 
 struct StackButterworth24 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         auto f1 = qwqdsp_simd_element::PackOps::Tan(w1 * 0.5f) * analog_w_mul;
         auto f2 = qwqdsp_simd_element::PackOps::Tan(w2 * 0.5f) * analog_w_mul;
         auto f0 = qwqdsp_simd_element::PackOps::Sqrt(f1 * f2);
@@ -203,7 +214,7 @@ struct StackButterworth24 {
 
 struct StackButterworth36 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         auto f1 = qwqdsp_simd_element::PackOps::Tan(w1 * 0.5f) * analog_w_mul;
         auto f2 = qwqdsp_simd_element::PackOps::Tan(w2 * 0.5f) * analog_w_mul;
         auto f0 = qwqdsp_simd_element::PackOps::Sqrt(f1 * f2);
@@ -223,7 +234,7 @@ struct PackingIIRDesigner {
     template <size_t NPrototypeFilters>
     static void Design(CascadeBPSVF& svf, std::array<qwqdsp_filter::IIRDesign::ZPK, NPrototypeFilters> const& prototype,
                        qwqdsp_simd_element::PackFloatCRef<4> w1, qwqdsp_simd_element::PackFloatCRef<4> w2,
-                       float analog_w_mul = 1) {
+                       float analog_w_mul) {
         std::array<PackState, NPrototypeFilters * 2> states;
 
         auto w1_analog = qwqdsp_simd_element::PackOps::Tan(w1 * 0.5f) * analog_w_mul;
@@ -245,22 +256,9 @@ struct PackingIIRDesigner {
     }
 };
 
-struct FlatButterworth12 {
-    static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
-        // prototype is a 2pole butterworth
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 1> zpk_buffer;
-            qwqdsp_filter::IIRDesignExtra::ButterworthAttenGain(zpk_buffer, 1, 0.5f);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<1>(svf, prototype, w1, w2, analog_w_mul);
-    }
-};
-
 struct FlatButterworth24 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         // prototype is a 4pole butterworth
         static auto const prototype = [] {
             std::array<qwqdsp_filter::IIRDesign::ZPK, 2> zpk_buffer;
@@ -273,86 +271,61 @@ struct FlatButterworth24 {
 
 struct FlatButterworth36 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         // prototype is a 4pole butterworth
         static auto const prototype = [] {
             std::array<qwqdsp_filter::IIRDesign::ZPK, 3> zpk_buffer;
-            qwqdsp_filter::IIRDesignExtra::ButterworthAttenGain(zpk_buffer, 3, 0.5f);
+            qwqdsp_filter::IIRDesignExtra::ButterworthAttenGain(zpk_buffer, 3, std::sqrt(0.793700526f));
             return zpk_buffer;
         }();
         PackingIIRDesigner::Design<3>(svf, prototype, w1, w2, analog_w_mul);
-    }
-};
-
-struct Chebyshev12 {
-    static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
-        // prototype is a 2pole chebyshev
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 1> zpk_buffer;
-            qwqdsp_filter::IIRDesign::Chebyshev1(zpk_buffer, 1, 6.02059991f, false);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<1>(svf, prototype, w1, w2, analog_w_mul);
     }
 };
 
 struct Chebyshev24 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
         // prototype is a 2pole chebyshev
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 2> zpk_buffer;
-            qwqdsp_filter::IIRDesign::Chebyshev1(zpk_buffer, 2, 6.02059991f, false);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<2>(svf, prototype, w1, w2, analog_w_mul);
+        std::array<qwqdsp_filter::IIRDesign::ZPK, 2> zpk_buffer;
+        qwqdsp_filter::IIRDesign::Chebyshev1(zpk_buffer, 2, ripple, false);
+        PackingIIRDesigner::Design<2>(svf, zpk_buffer, w1, w2, analog_w_mul);
     }
 };
 
 struct Chebyshev36 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloatCRef<4> w1,
-                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul = 1) noexcept {
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 3> zpk_buffer;
-            qwqdsp_filter::IIRDesign::Chebyshev1(zpk_buffer, 3, 6.02059991f, false);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<3>(svf, prototype, w1, w2, analog_w_mul);
+                       qwqdsp_simd_element::PackFloatCRef<4> w2, float analog_w_mul, float ripple) noexcept {
+        std::array<qwqdsp_filter::IIRDesign::ZPK, 3> zpk_buffer;
+        qwqdsp_filter::IIRDesign::Chebyshev1(zpk_buffer, 3, ripple, false);
+        PackingIIRDesigner::Design<3>(svf, zpk_buffer, w1, w2, analog_w_mul);
     }
 };
 
 struct Elliptic24 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloat<4> w1, qwqdsp_simd_element::PackFloat<4> w2,
-                       float analog_w_mul = 1) noexcept {
+                       float analog_w_mul, float ripple) noexcept {
         // prototype is a 2pole elliptci
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 2> zpk_buffer;
-            qwqdsp_filter::IIRDesign::Elliptic(zpk_buffer, 2, 6.02059991f, 100.0f);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<2>(svf, prototype, w1, w2, analog_w_mul);
+        std::array<qwqdsp_filter::IIRDesign::ZPK, 2> zpk_buffer;
+        qwqdsp_filter::IIRDesign::Elliptic(zpk_buffer, 2, ripple, 100.0f);
+        PackingIIRDesigner::Design<2>(svf, zpk_buffer, w1, w2, analog_w_mul);
     }
 };
 
 struct Elliptic36 {
     static void Design(CascadeBPSVF& svf, qwqdsp_simd_element::PackFloat<4> w1, qwqdsp_simd_element::PackFloat<4> w2,
-                       float analog_w_mul = 1) noexcept {
+                       float analog_w_mul, float ripple) noexcept {
         // prototype is a 3pole elliptci
-        static auto const prototype = [] {
-            std::array<qwqdsp_filter::IIRDesign::ZPK, 3> zpk_buffer;
-            qwqdsp_filter::IIRDesign::Elliptic(zpk_buffer, 3, 6.02059991f, 100.0f);
-            return zpk_buffer;
-        }();
-        PackingIIRDesigner::Design<3>(svf, prototype, w1, w2, analog_w_mul);
+        std::array<qwqdsp_filter::IIRDesign::ZPK, 3> zpk_buffer;
+        qwqdsp_filter::IIRDesign::Elliptic(zpk_buffer, 3, ripple, 100.0f);
+        PackingIIRDesigner::Design<3>(svf, zpk_buffer, w1, w2, analog_w_mul);
     }
 };
 
 template <class AssignMap>
 void ChannelVocoder::_UpdateFilters() {
     switch (filter_bank_mode_) {
-        case FilterBankMode::StackButterworth12:
-            _UpdateFilters2<AssignMap, StackButterworth12>();
+        case FilterBankMode::Bandpass12:
+            _UpdateFilters2<AssignMap, Bandpass12>();
             break;
         case FilterBankMode::StackButterworth24:
             _UpdateFilters2<AssignMap, StackButterworth24>();
@@ -360,17 +333,11 @@ void ChannelVocoder::_UpdateFilters() {
         case FilterBankMode::StackButterworth36:
             _UpdateFilters2<AssignMap, StackButterworth36>();
             break;
-        case FilterBankMode::FlatButterworth12:
-            _UpdateFilters2<AssignMap, FlatButterworth12>();
-            break;
         case FilterBankMode::FlatButterworth24:
             _UpdateFilters2<AssignMap, FlatButterworth24>();
             break;
         case FilterBankMode::FlatButterworth36:
             _UpdateFilters2<AssignMap, FlatButterworth36>();
-            break;
-        case FilterBankMode::Chebyshev12:
-            _UpdateFilters2<AssignMap, Chebyshev12>();
             break;
         case FilterBankMode::Chebyshev24:
             _UpdateFilters2<AssignMap, Chebyshev24>();
@@ -427,8 +394,8 @@ void ChannelVocoder::_UpdateFilters2() {
         side_w2 = qwqdsp_simd_element::PackOps::Clamp(side_w2, min_w, max_w);
         auto& main_filter = filters_[filter_idx].first;
         auto& side_filter = filters_[filter_idx].second;
-        Designer::Design(main_filter, main_w1, main_w2);
-        Designer::Design(side_filter, side_w1, side_w2, carry_w_mul_);
+        Designer::Design(main_filter, main_w1, main_w2, 1.0f, filter_ripple_);
+        Designer::Design(side_filter, side_w1, side_w2, carry_w_mul_, filter_ripple_);
         ++filter_idx;
     }
 }
@@ -436,7 +403,7 @@ void ChannelVocoder::_UpdateFilters2() {
 void ChannelVocoder::ProcessBlock(qwqdsp_simd_element::PackFloat<2>* main, qwqdsp_simd_element::PackFloat<2>* side,
                                   size_t num_samples) {
     switch (filter_bank_mode_) {
-        case FilterBankMode::StackButterworth12:
+        case FilterBankMode::Bandpass12:
             _ProcessBlock<2, true>(main, side, num_samples);
             break;
         case FilterBankMode::StackButterworth24:
@@ -444,10 +411,6 @@ void ChannelVocoder::ProcessBlock(qwqdsp_simd_element::PackFloat<2>* main, qwqds
             break;
         case FilterBankMode::StackButterworth36:
             _ProcessBlock<6, true>(main, side, num_samples);
-            break;
-        case FilterBankMode::FlatButterworth12:
-        case FilterBankMode::Chebyshev12:
-            _ProcessBlock<2, false>(main, side, num_samples);
             break;
         case FilterBankMode::FlatButterworth24:
         case FilterBankMode::Chebyshev24:

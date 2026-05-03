@@ -23,6 +23,7 @@ private:
     ui::FlatCombobox map_;
     juce::Label label_filter_bank_{"", "filter bank mode"};
     ui::FlatCombobox filter_bank_;
+    ui::FlatSlider ripple_{"ripple", ui::FlatSlider::TitleLayout::Left};
     ui::Dial gate_{"gate"};
 };
 

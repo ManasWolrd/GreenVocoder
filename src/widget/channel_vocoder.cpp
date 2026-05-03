@@ -30,6 +30,8 @@ ChannelVocoder::ChannelVocoder(AudioPluginAudioProcessor& p)
     addAndMakeVisible(gate_);
     ui::SetLableBlack(label_filter_bank_);
     addAndMakeVisible(label_filter_bank_);
+    ripple_.BindParam(apvts, id::kChannelVocoderRipple);
+    addAndMakeVisible(ripple_);
 }
 
 void ChannelVocoder::resized() {
@@ -52,7 +54,8 @@ void ChannelVocoder::resized() {
 
     auto comb = top.removeFromLeft(150);
     label_filter_bank_.setBounds(comb.removeFromTop(20));
-    filter_bank_.setBounds(comb.removeFromTop(30));
+    filter_bank_.setBounds(comb.removeFromTop(25));
+    ripple_.setBounds(comb);
 }
 
 void ChannelVocoder::paint(juce::Graphics& g) {
