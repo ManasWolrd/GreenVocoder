@@ -8,7 +8,6 @@
 #include "dsp/channel_vocoder.hpp"
 #include "dsp/tilt_filter.hpp"
 #include "dsp/ensemble.hpp"
-#include "dsp/mfcc_vocoder.hpp"
 #include "dsp/block_burg_lpc.hpp"
 
 #include "qwqdsp/oscillator/polyblep.hpp"
@@ -33,6 +32,7 @@ public:
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
+    void reset() override;
 
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
 
@@ -81,7 +81,6 @@ public:
     green_vocoder::dsp::LeakyBurgLPC burg_lpc_;
     green_vocoder::dsp::BlockBurgLPC block_burg_lpc_;
     green_vocoder::dsp::STFTVocoder stft_vocoder_;
-    green_vocoder::dsp::MFCCVocoder mfcc_vocoder_;
     green_vocoder::dsp::ChannelVocoder channel_vocoder_;
     green_vocoder::dsp::Ensemble ensemble_;
     qwqdsp_oscillator::WhiteNoise noise_;
@@ -106,6 +105,7 @@ public:
     std::atomic<int> latency_{};
 
     juce::AudioParameterChoice* vocoder_type_param_{};
+    eVocoderType last_vocoder_type_{eVocoderType_LeakyBurgLPC};
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioPluginAudioProcessor)

@@ -12,16 +12,20 @@ public:
     void paint(juce::Graphics& g) override;
 private:
     void timerCallback() override;
+    void DrawStandardCepstrum(juce::Graphics& g);
+    void DrawMfcc(juce::Graphics& g);
+    void OnModeChanged();
 
     AudioPluginAudioProcessor& processor_;
-    ui::Dial bandwidth_{"smear"};
     ui::Dial release_{"release"};
     ui::Dial attack_{"attack"};
-    ui::Dial blend_{"noisy"};
     ui::FlatCombobox size_;
-
-    ui::Switch use_v2_{"cepstrum", "standard"};
+    ui::FlatCombobox mode_;
+    
+    ui::Dial blend_{"noisy"};
+    ui::Dial bandwidth_{"smear"};
     ui::Dial detail_{"detail"};
+    ui::FlatSlider mfcc_size_{"bands"};
 };
 
 }

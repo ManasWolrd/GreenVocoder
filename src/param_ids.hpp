@@ -5,7 +5,6 @@ enum eVocoderType {
     eVocoderType_LeakyBurgLPC = 0,
     eVocoderType_BlockBurgLPC,
     eVocoderType_STFTVocoder,
-    eVocoderType_MFCCVocoder,
     eVocoderType_ChannelVocoder,
     eVocoderType_NumVocoderTypes
 };
@@ -21,7 +20,6 @@ static const juce::StringArray kVocoderNames{
     "Leaky Burg LPC",
     "Block Burg LPC",
     "STFT Vocoder",
-    "MFCC Vocoder",
     "Channel Vocoder",
 };
 
@@ -59,8 +57,8 @@ static constexpr auto kStftAttack = "stft_attack";
 static constexpr auto kStftRelease = "stft_release";
 static constexpr auto kStftBlend = "stft_blend";
 static constexpr auto kStftSize = "stft_size";
-static constexpr auto kStftVocoderV2 = "stft_v2";
 static constexpr auto kStftDetail = "stft_detail";
+static constexpr auto kStftType = "stft_type";
 
 static constexpr auto kEnsembleDetune = "ens_detune";
 static constexpr auto kEnsembleRate = "ens_rate";

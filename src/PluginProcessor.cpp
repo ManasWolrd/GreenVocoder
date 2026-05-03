@@ -7,7 +7,6 @@
 #include "global.hpp"
 #include "param_ids.hpp"
 
-
 #if BUILD_IN_CI
 #define I_AM_USING_LOOPBACK_DEBUG 0
 #else
@@ -74,7 +73,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         paramListeners_.Add(p, [this](float l) {
             channel_vocoder_.SetFormantShift(l);
             stft_vocoder_.SetFormantShift(l);
-            mfcc_vocoder_.SetFormantShift(l);
             // scale the formant ratio to almost what other vocoders sound like for LPC vocoders
             l *= (16.0f / 24.0f);
             block_burg_lpc_.SetFormantShift(l / 24.0f);
@@ -98,42 +96,32 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderAttack, 1},
                                                              id::kChannelVocoderAttack, 1.0f, 1000.0f, 10.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetAttack(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetAttack(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderGate, 1},
                                                              id::kChannelVocoderGate, -100.0f, 20.0f, -100.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetGate(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetGate(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID{id::kChannelVocoderRelease, 1}, id::kChannelVocoderRelease,
             juce::NormalisableRange<float>{10.0f, 32000.0f, 1.0f, 0.4f}, 150.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetRelease(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetRelease(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderFreqBegin, 1},
                                                              id::kChannelVocoderFreqBegin, 20.0f, 2000.0f, 40.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetFreqBegin(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetFreqBegin(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderFreqEnd, 1},
                                                              id::kChannelVocoderFreqEnd, 4000.0f, 18000.0f, 12000.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetFreqEnd(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetFreqEnd(v); });
         layout.add(std::move(p));
     }
     {
@@ -142,33 +130,25 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             juce::NormalisableRange<float>(green_vocoder::dsp::ChannelVocoder::kMinOrder,
                                            green_vocoder::dsp::ChannelVocoder::kMaxOrder, 4),
             20);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetNumBands(static_cast<int>(std::round(v)));
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetNumBands(static_cast<int>(std::round(v))); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderScale, 1},
                                                              id::kChannelVocoderScale, 0.1f, 2.0f, 1.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetModulatorScale(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetModulatorScale(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderRipple, 1},
                                                              id::kChannelVocoderRipple, 0.1f, 10.0f, 1.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetFilterRipple(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetFilterRipple(v); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderCarryScale, 1},
                                                              id::kChannelVocoderCarryScale, 0.1f, 2.0f, 1.0f);
-        paramListeners_.Add(p, [this](float v) {
-            channel_vocoder_.SetCarryScale(v);
-        });
+        paramListeners_.Add(p, [this](float v) { channel_vocoder_.SetCarryScale(v); });
         layout.add(std::move(p));
     }
     {
@@ -242,30 +222,24 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID{id::kMfccNumBands, 1}, id::kMfccNumBands,
-            juce::NormalisableRange<float>{green_vocoder::dsp::MFCCVocoder::kMinNumMfcc,
-                                           green_vocoder::dsp::MFCCVocoder::kMaxNumMfcc, 4.0f},
+            juce::NormalisableRange<float>{green_vocoder::dsp::STFTVocoder::kMinNumMfcc,
+                                           green_vocoder::dsp::STFTVocoder::kMaxNumMfcc, 4.0f},
             20.0f);
-        paramListeners_.Add(p, [this](float bw) { mfcc_vocoder_.SetNumMfcc(static_cast<size_t>(bw)); });
+        paramListeners_.Add(p, [this](float bw) { stft_vocoder_.SetNumMfcc(static_cast<size_t>(bw)); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kStftRelease, 1}, id::kStftRelease,
                                                              juce::NormalisableRange<float>{1.0f, 1000.0f, 1.0f, 0.4f},
                                                              100.0f);
-        paramListeners_.Add(p, [this](float bw) {
-            stft_vocoder_.SetRelease(bw);
-            mfcc_vocoder_.SetRelease(bw);
-        });
+        paramListeners_.Add(p, [this](float bw) { stft_vocoder_.SetRelease(bw); });
         layout.add(std::move(p));
     }
     {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kStftAttack, 1}, id::kStftAttack,
                                                              juce::NormalisableRange<float>{1.0f, 1000.0f, 1.0f, 0.4f},
                                                              1.0f);
-        paramListeners_.Add(p, [this](float bw) {
-            stft_vocoder_.SetAttack(bw);
-            mfcc_vocoder_.SetAttack(bw);
-        });
+        paramListeners_.Add(p, [this](float bw) { stft_vocoder_.SetAttack(bw); });
         layout.add(std::move(p));
     }
     {
@@ -281,22 +255,22 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         paramListeners_.Add(p, [this](int idx) {
             static constexpr std::array kArray{256, 512, 1024, 2048, 4096};
             stft_vocoder_.SetFFTSize(kArray[idx]);
-            mfcc_vocoder_.SetFFTSize(kArray[idx]);
             block_burg_lpc_.SetBlockSize(kArray[idx]);
             SetLatency();
         });
         layout.add(std::move(p));
     }
     {
-        auto p = std::make_unique<juce::AudioParameterBool>(juce::ParameterID{id::kStftVocoderV2, 1},
-                                                            id::kStftVocoderV2, false);
-        paramListeners_.Add(p, [this](bool use_v2) { stft_vocoder_.SetUseV2(use_v2); });
-        layout.add(std::move(p));
-    }
-    {
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kStftDetail, 1}, id::kStftDetail,
                                                              0.01f, 1.0f, 0.3f);
         paramListeners_.Add(p, [this](float omega) { stft_vocoder_.SetDetail(omega); });
+        layout.add(std::move(p));
+    }
+    {
+        auto p = std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{id::kStftType, 1}, id::kStftType,
+                                                              juce::StringArray{"Standard", "Cepstrum", "MFCC"}, 0);
+        paramListeners_.Add(
+            p, [this](int mode) { stft_vocoder_.SetMode(static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode)); });
         layout.add(std::move(p));
     }
 
@@ -454,7 +428,6 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
 
     burg_lpc_.Init(fs, block_size);
     stft_vocoder_.Init(fs);
-    mfcc_vocoder_.Init(fs);
     channel_vocoder_.Init(fs, block_size);
     ensemble_.Init(fs);
     block_burg_lpc_.Init(fs);
@@ -471,6 +444,8 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
 
     paramListeners_.MarkAll();
 }
+
+void AudioPluginAudioProcessor::reset() {}
 
 void AudioPluginAudioProcessor::releaseResources() {
     // When playback stops, you can use this as an opportunity to free up any
@@ -648,6 +623,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
             crossing_main_buffer_[i] = pre_tilt_filter_.Tick(crossing_main_buffer_[i]);
         }
 
+        eVocoderType curr_vocoder_type = static_cast<eVocoderType>(vocoder_type_param_->getIndex());
+        if (last_vocoder_type_ != curr_vocoder_type) {
+            last_vocoder_type_ = curr_vocoder_type;
+        }
+
         // vocoder
         switch (vocoder_type_param_->getIndex()) {
             case eVocoderType_LeakyBurgLPC:
@@ -656,9 +636,6 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                 break;
             case eVocoderType_STFTVocoder:
                 stft_vocoder_.Process(crossing_main_buffer_.data(), crossing_side_buffer_.data(), num_process);
-                break;
-            case eVocoderType_MFCCVocoder:
-                mfcc_vocoder_.Process(crossing_main_buffer_.data(), crossing_side_buffer_.data(), num_process);
                 break;
             case eVocoderType_ChannelVocoder:
                 channel_vocoder_.ProcessBlock(crossing_main_buffer_.data(), crossing_side_buffer_.data(), num_process);
@@ -735,7 +712,6 @@ void AudioPluginAudioProcessor::SetLatency() {
     int latency = 0;
     switch (vocoder_type_param_->getIndex()) {
         case eVocoderType_STFTVocoder:
-        case eVocoderType_MFCCVocoder:
         case eVocoderType_BlockBurgLPC:
             latency += stft_vocoder_.GetFFTSize();
             break;

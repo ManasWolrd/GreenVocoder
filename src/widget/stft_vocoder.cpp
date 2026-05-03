@@ -1,12 +1,12 @@
 #include "stft_vocoder.hpp"
+#include <vector>
 #include "PluginProcessor.h"
 #include "param_ids.hpp"
-#include <vector>
 
 namespace green_vocoder::widget {
 
 STFTVocoder::STFTVocoder(AudioPluginAudioProcessor& processor)
-: processor_(processor) {
+    : processor_(processor) {
     auto& apvts = *processor.value_tree_;
 
     bandwidth_.BindParam(apvts, id::kStftWindowWidth);
@@ -24,32 +24,66 @@ STFTVocoder::STFTVocoder(AudioPluginAudioProcessor& processor)
     size_.BindParam(apvts, id::kStftSize);
     addAndMakeVisible(size_);
 
-    use_v2_.BindParam(apvts, id::kStftVocoderV2);
-    addAndMakeVisible(use_v2_);
     detail_.BindParam(apvts, id::kStftDetail);
     addAndMakeVisible(detail_);
 
-    use_v2_.onClick = [this] {
-        bool display = use_v2_.getToggleState();
-        detail_.setVisible(display);
+    mfcc_size_.BindParam(apvts, id::kMfccNumBands);
+    addAndMakeVisible(mfcc_size_);
+
+    mode_.BindParam(apvts, id::kStftType);
+    mode_.onChange = [this] {
+        OnModeChanged();
     };
-    use_v2_.onClick();
+    addAndMakeVisible(mode_);
+
+    OnModeChanged();
 }
 
 void STFTVocoder::resized() {
+    using enum green_vocoder::dsp::STFTVocoder::Mode;
+    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex());
+
     auto b = getLocalBounds();
     auto top = b.removeFromTop(65);
-    bandwidth_.setBounds(top.removeFromLeft(50));
+    size_.setBounds(top.removeFromLeft(100).withSizeKeepingCentre(100, 30));
     attack_.setBounds(top.removeFromLeft(50));
     release_.setBounds(top.removeFromLeft(50));
-    blend_.setBounds(top.removeFromLeft(50));
-    size_.setBounds(top.removeFromLeft(100).withSizeKeepingCentre(100, 30));
-    top.removeFromLeft(4);
-    use_v2_.setBounds(top.removeFromLeft(80).withSizeKeepingCentre(80, 30));
-    detail_.setBounds(top.removeFromLeft(50).withSizeKeepingCentre(50, 65));
+    
+    if (mode == Standard) {
+        bandwidth_.setBounds(top.removeFromLeft(50));
+        blend_.setBounds(top.removeFromLeft(50));
+    }
+    if (mode == Cepstrum) {
+        detail_.setBounds(top.removeFromLeft(50).withSizeKeepingCentre(50, 65));
+        blend_.setBounds(top.removeFromLeft(50));
+    }
+    if (mode == MFCC) {
+        mfcc_size_.setBounds(top.removeFromLeft(80).withSizeKeepingCentre(80, 40));
+    }
+
+    mode_.setBounds(top.removeFromRight(80).withSizeKeepingCentre(80, 40).reduced(2));
 }
 
 void STFTVocoder::paint(juce::Graphics& g) {
+    using enum green_vocoder::dsp::STFTVocoder::Mode;
+    switch (static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex())) {
+        case Standard:
+        case Cepstrum:
+            DrawStandardCepstrum(g);
+            break;
+        case MFCC:
+            DrawMfcc(g);
+            break;
+    }
+}
+
+void STFTVocoder::timerCallback() {
+    repaint(getLocalBounds().removeFromTop(bandwidth_.getBottom()));
+}
+
+// -------------------- private --------------------
+
+void STFTVocoder::DrawStandardCepstrum(juce::Graphics& g) {
     auto bb = getLocalBounds();
     bb.removeFromTop(bandwidth_.getBottom());
     g.setColour(ui::black_bg);
@@ -67,9 +101,11 @@ void STFTVocoder::paint(juce::Graphics& g) {
     constexpr float bound_bottom_db = -75.0f;
     constexpr float freq_begin = 20.0f;
     constexpr float freq_pow = 3.0f; // 20k
-    auto convert_db_to_y = [y = bb.getY(), h = bb.getHeight()](float db) ->float {
-        if (db < bound_bottom_db) return static_cast<float>(y + h);
-        else if (db > bound_top_db) return static_cast<float>(y);
+    auto convert_db_to_y = [y = bb.getY(), h = bb.getHeight()](float db) -> float {
+        if (db < bound_bottom_db)
+            return static_cast<float>(y + h);
+        else if (db > bound_top_db)
+            return static_cast<float>(y);
         auto nor = (db - bound_bottom_db) / (bound_top_db - bound_bottom_db);
         return y + h * (1.0f - nor);
     };
@@ -82,12 +118,13 @@ void STFTVocoder::paint(juce::Graphics& g) {
             auto db = last_line_db + db_span * i;
             auto y = convert_db_to_y(db);
             g.drawHorizontalLine(y, bb.getX(), bb.getRight());
-            g.drawSingleLineText(std::to_string(static_cast<int>(db)), bb.getX(), y + g.getCurrentFont().getHeight() / 2);
+            g.drawSingleLineText(std::to_string(static_cast<int>(db)), bb.getX(),
+                                 y + g.getCurrentFont().getHeight() / 2);
         }
     }
     {
         // 1~9 * base -> 0.0~1.0(<1.0)
-        static const std::array kLogJtable {
+        static const std::array kLogJtable{
             0.0f,
             std::log10(2.0f),
             std::log10(3.0f),
@@ -98,12 +135,7 @@ void STFTVocoder::paint(juce::Graphics& g) {
             std::log10(8.0f),
             std::log10(9.0f),
         };
-        static const juce::StringArray kFreqStr {
-            "20",
-            "200",
-            "2k",
-            "20k"
-        };
+        static const juce::StringArray kFreqStr{"20", "200", "2k", "20k"};
         float w = bb.getWidth();
         float span_w = w / 3.0f;
         for (int i = 0; i < 3; ++i) {
@@ -127,7 +159,7 @@ void STFTVocoder::paint(juce::Graphics& g) {
     }
 
     auto b = bb.toFloat();
-    juce::Point<float> line_last{ b.getX(), b.getCentreY() };
+    juce::Point<float> line_last{b.getX(), b.getCentreY()};
     g.setColour(ui::line_fore);
     float mul_val = std::pow(10.0f, freq_pow / b.getWidth());
     float mul_begin = 1.0f;
@@ -135,23 +167,59 @@ void STFTVocoder::paint(juce::Graphics& g) {
     for (int x = 0; x < bb.getWidth(); ++x) {
         float omega = omega_base * mul_begin;
         mul_begin *= mul_val;
-        
+
         int idx = static_cast<int>(omega * gains.size());
         idx = std::min<int>(idx, static_cast<int>(gains.size()) - 1);
         float gain = gains[idx];
         float db_gain = 20.0f * std::log10(gain + 1e-10f);
         float y = convert_db_to_y(db_gain);
-        juce::Point line_end{ static_cast<float>(x + b.toFloat().getX()), y };
+        juce::Point line_end{static_cast<float>(x + b.toFloat().getX()), y};
         g.drawLine(juce::Line<float>{line_last, line_end}, 2.0f);
         line_last = line_end;
     }
-
-    // g.setColour(juce::Colours::white);
-    // g.drawRect(bb);
 }
 
-void STFTVocoder::timerCallback() {
-    repaint(getLocalBounds().removeFromTop(bandwidth_.getBottom()));
+void STFTVocoder::DrawMfcc(juce::Graphics& g) {
+    auto b = getLocalBounds();
+    b.removeFromTop(attack_.getBottom());
+    auto bb = b.toFloat();
+
+    g.setColour(ui::black_bg);
+    g.fillRect(bb);
+
+    constexpr float up = 0.0f;
+    constexpr float down = -60.0f;
+
+    size_t nbands = static_cast<size_t>(mfcc_size_.slider.getValue());
+    float width = bb.getWidth() / static_cast<float>(nbands);
+    float x = bb.getX();
+    auto peaks = processor_.stft_vocoder_.mfcc_gains_;
+    for (size_t i = 0; i < nbands; ++i) {
+        juce::Rectangle<float> rect{x + width * 0.25f, bb.getY(), width * 0.5f, bb.getHeight()};
+        float gain = peaks[i];
+
+        float db_gain = 20.0f * std::log10(gain + 1e-10f);
+        db_gain = std::clamp(db_gain, down, up);
+        float y_nor = (db_gain - (down)) / (up - (down));
+
+        auto bin = rect.removeFromBottom(y_nor * rect.getHeight());
+        g.setColour(ui::line_fore);
+        g.fillRect(bin);
+
+        x += width;
+    }
 }
 
+void STFTVocoder::OnModeChanged() {
+    using enum green_vocoder::dsp::STFTVocoder::Mode;
+    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex());
+    blend_.setVisible(mode != MFCC);
+    bandwidth_.setVisible(mode == Standard);
+    detail_.setVisible(mode == Cepstrum);
+    mfcc_size_.setVisible(mode == MFCC);
+    if (!getBounds().isEmpty()) {
+        resized();
+    }
 }
+
+} // namespace green_vocoder::widget

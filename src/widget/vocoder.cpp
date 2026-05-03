@@ -2,7 +2,6 @@
 #include "burg_lpc.hpp"
 #include "channel_vocoder.hpp"
 #include "stft_vocoder.hpp"
-#include "mfcc_vocoder.hpp"
 #include "PluginProcessor.h"
 
 namespace green_vocoder::widget {
@@ -19,11 +18,9 @@ Vocoder::Vocoder(AudioPluginAudioProcessor& p) {
     burg_ = std::make_unique<widget::BurgLPC>(p);
     channel_ = std::make_unique<widget::ChannelVocoder>(p);
     stft_ = std::make_unique<widget::STFTVocoder>(p);
-    mfcc_ = std::make_unique<widget::MFCCVocoder>(p);
     addChildComponent(burg_.get());
     addChildComponent(channel_.get());
     addChildComponent(stft_.get());
-    addChildComponent(mfcc_.get());
 
     comboBoxChanged(&vocoder_type_);
     startTimerHz(30);
@@ -34,7 +31,6 @@ Vocoder::~Vocoder() {
     burg_ = nullptr;
     channel_ = nullptr;
     stft_ = nullptr;
-    mfcc_ = nullptr;
 }
 
 void Vocoder::resized() {
@@ -48,7 +44,6 @@ void Vocoder::resized() {
     burg_->setBounds(b);
     channel_->setBounds(b);
     stft_->setBounds(b);
-    mfcc_->setBounds(b);
 }
 
 void Vocoder::comboBoxChanged(juce::ComboBox* box) {
@@ -66,9 +61,6 @@ void Vocoder::comboBoxChanged(juce::ComboBox* box) {
                 break;
             case eVocoderType_STFTVocoder:
                 current_vocoder_widget_ = stft_.get();
-                break;
-            case eVocoderType_MFCCVocoder:
-                current_vocoder_widget_ = mfcc_.get();
                 break;
             case eVocoderType_ChannelVocoder:
                 current_vocoder_widget_ = channel_.get();

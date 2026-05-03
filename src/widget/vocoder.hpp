@@ -21,6 +21,5 @@ private:
     std::unique_ptr<juce::Component> burg_;
     std::unique_ptr<juce::Component> channel_;
     std::unique_ptr<juce::Component> stft_;
-    std::unique_ptr<juce::Component> mfcc_;
 };
 }

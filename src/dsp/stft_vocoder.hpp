@@ -10,38 +10,58 @@ namespace green_vocoder::dsp {
 
 class STFTVocoder {
 public:
-    static constexpr size_t kExtraGainSize = 1;
+    static constexpr int kExtraGainSize = 1;
+    static constexpr int kMaxNumMfcc = 80;
+    static constexpr int kMinNumMfcc = 8;
+
+    enum class Mode {
+        Standard,
+        Cepstrum,
+        MFCC,
+    };
 
     void Init(float fs);
-    void Process(qwqdsp_simd_element::PackFloat<2>* main, qwqdsp_simd_element::PackFloat<2>* side, size_t num_samples);
+    void Reset();
+    void Process(qwqdsp_simd_element::PackFloat<2>* main, qwqdsp_simd_element::PackFloat<2>* side, int num_samples);
 
-    void SetBandwidth(float bw);
-    void SetRelease(float ms);
     void SetAttack(float ms);
+    void SetRelease(float ms);
     void SetBlend(float blend);
-    void SetFFTSize(size_t size);
+    void SetFFTSize(int size);
     void SetFormantShift(float formant_shift);
+    void SetMode(Mode mode);
 
-    void SetUseV2(bool use);
-    void SetDetail(float detail);
-
-    size_t GetFFTSize() const {
+    int GetFFTSize() const {
         return fft_size_;
     }
 
+    // standard
+    void SetBandwidth(float bw);
+
+    // cepstrum
+    void SetDetail(float detail);
+
+    // mfcc
+    void SetNumMfcc(int num_mfcc);
+
     std::vector<float> gains_{};
     std::vector<float> gains2_{};
+
+    std::array<float, kMaxNumMfcc> mfcc_gains_{};
+    std::array<float, kMaxNumMfcc> mfcc_gains2_{};
 private:
     float Blend(float x);
-    void SpectralProcess(std::vector<float>& real_in, std::vector<float>& imag_in,
-                         std::vector<float>& real_out, std::vector<float>& imag_out,
-                         std::vector<float>& gains);
-    void SpectralProcess2(std::vector<float>& real_in, std::vector<float>& imag_in,
-                          std::vector<float>& real_out, std::vector<float>& imag_out,
-                          std::vector<float>& gains);
+    void SpectralProcess_Standard(std::vector<float>& real_in, std::vector<float>& imag_in,
+                                  std::vector<float>& real_out, std::vector<float>& imag_out,
+                                  std::vector<float>& gains);
+    void SpectralProcess_Cepstrum(std::vector<float>& real_in, std::vector<float>& imag_in,
+                                  std::vector<float>& real_out, std::vector<float>& imag_out,
+                                  std::vector<float>& gains);
+    void SpectralProcess_MFCC(std::vector<float>& real_in, std::vector<float>& imag_in, std::vector<float>& real_out,
+                              std::vector<float>& imag_out, std::array<float, kMaxNumMfcc>& gains);
 
+    // common fft
     audiofft::AudioFFT fft_;
-    std::vector<float> window_{};
     std::vector<float> hann_window_{};
     std::vector<float> temp_main_{};
     std::vector<float> temp_side_{};
@@ -49,15 +69,18 @@ private:
     std::vector<float> real_side_{};
     std::vector<float> imag_main_{};
     std::vector<float> imag_side_{};
-    
-    std::array<qwqdsp_simd_element::PackFloat<2>, 32768> main_inputBuffer_{};
-    std::array<qwqdsp_simd_element::PackFloat<2>, 32768> side_inputBuffer_{};
-    std::array<qwqdsp_simd_element::PackFloat<2>, 32768> main_outputBuffer_{};
-    size_t fft_size_{};
-    size_t hop_size_{};
-    size_t numInput_{};
-    size_t writeEnd_{};
-    size_t writeAddBegin_{};
+    std::vector<qwqdsp_simd_element::PackFloat<2>> main_inputBuffer_{};
+    std::vector<qwqdsp_simd_element::PackFloat<2>> side_inputBuffer_{};
+    std::vector<qwqdsp_simd_element::PackFloat<2>> main_outputBuffer_{};
+    int numInput_{};
+    int fft_size_{};
+    int hop_size_{};
+    int writeEnd_{};
+    int writeAddBegin_{};
+    Mode mode_{};
+
+    // standard
+    std::vector<float> window_{};
     float bandwidth_{};
     float decay_{};
     float attck_{};
@@ -68,15 +91,20 @@ private:
     float attack_ms_{};
     float formant_mul_{};
 
-    // v2 cepstrum processing
-    bool use_v2_{};
+    // cepstrum processing
     float detail_{};
+    float norm_detail_{};
     std::vector<float> temp_;
     std::vector<float> re1_;
     std::vector<float> phase_;
     qwqdsp_spectral::ComplexFFT cep_fft_;
     std::vector<float> cep_window_{};
     std::vector<float> cep_window_fft_{};
+
+    // mfcc
+    std::array<size_t, kMaxNumMfcc + 1> mfcc_indexs_{};
+    int num_mfcc_{};
+    std::vector<float> fill_gains_{};
 };
 
 } // namespace green_vocoder::dsp
