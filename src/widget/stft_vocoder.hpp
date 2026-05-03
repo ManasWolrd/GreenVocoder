@@ -20,12 +20,12 @@ private:
     ui::Dial release_{"release"};
     ui::Dial attack_{"attack"};
     ui::FlatCombobox size_;
-    ui::FlatCombobox mode_;
+    ui::FlatSelector mode_;
     
     ui::Dial blend_{"noisy"};
     ui::Dial bandwidth_{"smear"};
     ui::Dial detail_{"detail"};
-    ui::FlatSlider mfcc_size_{"bands"};
+    ui::FlatSlider mfcc_size_{"bands", ui::FlatSlider::TitleLayout::Top};
 };
 
 }

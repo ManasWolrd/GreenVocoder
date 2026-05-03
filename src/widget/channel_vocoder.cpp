@@ -53,7 +53,7 @@ void ChannelVocoder::resized() {
     gate_.setBounds(top.removeFromLeft(50));
 
     auto comb = top.removeFromLeft(150);
-    label_filter_bank_.setBounds(comb.removeFromTop(20));
+    label_filter_bank_.setBounds(comb.removeFromTop(16));
     filter_bank_.setBounds(comb.removeFromTop(25));
     ripple_.setBounds(comb);
 }

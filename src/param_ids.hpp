@@ -17,10 +17,10 @@ enum eChannelVocoderMap {
 };
 
 static const juce::StringArray kVocoderNames{
-    "Leaky Burg LPC",
-    "Block Burg LPC",
-    "STFT Vocoder",
-    "Channel Vocoder",
+    "Leaky LPC",
+    "Block LPC",
+    "STFT",
+    "Bandpass",
 };
 
 static const juce::StringArray kChannelVocoderMapNames{

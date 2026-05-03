@@ -333,7 +333,7 @@ void STFTVocoder::SpectralProcess_Standard(std::vector<float>& real_in, std::vec
 void STFTVocoder::SpectralProcess_Cepstrum(std::vector<float>& real_in, std::vector<float>& imag_in,
                                            std::vector<float>& real_out, std::vector<float>& imag_out,
                                            std::vector<float>& gains) {
-    float window_gain = 2.0f / fft_size_;
+    float window_gain = GetFixGain(fft_size_) * 2.0f / fft_size_;
     size_t num_bins = fft_size_ / 2 + 1;
     for (size_t i = 0; i < fft_size_ / 2; ++i) {
         float re = real_in[i];

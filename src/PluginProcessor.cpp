@@ -56,7 +56,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     // vocoder type
     {
         auto p = std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{id::kVocoderType, 1}, id::kVocoderType,
-                                                              kVocoderNames, 0);
+                                                              kVocoderNames, 2);
         vocoder_type_param_ = p.get();
         paramListeners_.Add(p, [this](int i) {
             (void)i;
@@ -268,7 +268,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     }
     {
         auto p = std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{id::kStftType, 1}, id::kStftType,
-                                                              juce::StringArray{"Standard", "Cepstrum", "MFCC"}, 0);
+                                                              juce::StringArray{"Standard", "Cepstrum", "MFCC"}, 1);
         paramListeners_.Add(
             p, [this](int mode) { stft_vocoder_.SetMode(static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode)); });
         layout.add(std::move(p));

@@ -30,8 +30,8 @@ STFTVocoder::STFTVocoder(AudioPluginAudioProcessor& processor)
     mfcc_size_.BindParam(apvts, id::kMfccNumBands);
     addAndMakeVisible(mfcc_size_);
 
-    mode_.BindParam(apvts, id::kStftType);
-    mode_.onChange = [this] {
+    mode_.BindParam(apvts, id::kStftType, true);
+    mode_.on_value_changed = [this](size_t index) {
         OnModeChanged();
     };
     addAndMakeVisible(mode_);
@@ -41,7 +41,7 @@ STFTVocoder::STFTVocoder(AudioPluginAudioProcessor& processor)
 
 void STFTVocoder::resized() {
     using enum green_vocoder::dsp::STFTVocoder::Mode;
-    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex());
+    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.Get());
 
     auto b = getLocalBounds();
     auto top = b.removeFromTop(65);
@@ -61,12 +61,19 @@ void STFTVocoder::resized() {
         mfcc_size_.setBounds(top.removeFromLeft(80).withSizeKeepingCentre(80, 40));
     }
 
-    mode_.setBounds(top.removeFromRight(80).withSizeKeepingCentre(80, 40).reduced(2));
+    mode_.setBounds(top.withHeight(30));
+    {
+        auto& choices = mode_.GetAllCubes();
+        auto bound = mode_.getLocalBounds();
+        for (auto& cube : choices) {
+            cube->setBounds(bound.removeFromLeft(cube->GetTextBound(bound.getHeight())).reduced(2));
+        }
+    }
 }
 
 void STFTVocoder::paint(juce::Graphics& g) {
     using enum green_vocoder::dsp::STFTVocoder::Mode;
-    switch (static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex())) {
+    switch (static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.Get())) {
         case Standard:
         case Cepstrum:
             DrawStandardCepstrum(g);
@@ -85,7 +92,7 @@ void STFTVocoder::timerCallback() {
 
 void STFTVocoder::DrawStandardCepstrum(juce::Graphics& g) {
     auto bb = getLocalBounds();
-    bb.removeFromTop(bandwidth_.getBottom());
+    bb.removeFromTop(attack_.getBottom());
     g.setColour(ui::black_bg);
     g.fillRect(bb);
     auto current_font = g.getCurrentFont();
@@ -212,7 +219,7 @@ void STFTVocoder::DrawMfcc(juce::Graphics& g) {
 
 void STFTVocoder::OnModeChanged() {
     using enum green_vocoder::dsp::STFTVocoder::Mode;
-    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.getSelectedItemIndex());
+    auto mode = static_cast<green_vocoder::dsp::STFTVocoder::Mode>(mode_.Get());
     blend_.setVisible(mode != MFCC);
     bandwidth_.setVisible(mode == Standard);
     detail_.setVisible(mode == Cepstrum);
