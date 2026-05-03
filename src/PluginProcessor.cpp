@@ -91,7 +91,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                               "flat butterworth 36", "chebyshev 24", "chebyshev 36", "Elliptic 24", "Elliptic 36"},
             1);
         paramListeners_.Add(p, [this](int mode) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetFilterBankMode(static_cast<green_vocoder::dsp::ChannelVocoder::FilterBankMode>(mode));
         });
         layout.add(std::move(p));
@@ -100,7 +99,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderAttack, 1},
                                                              id::kChannelVocoderAttack, 1.0f, 1000.0f, 10.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetAttack(v);
         });
         layout.add(std::move(p));
@@ -109,7 +107,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderGate, 1},
                                                              id::kChannelVocoderGate, -100.0f, 20.0f, -100.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetGate(v);
         });
         layout.add(std::move(p));
@@ -119,7 +116,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             juce::ParameterID{id::kChannelVocoderRelease, 1}, id::kChannelVocoderRelease,
             juce::NormalisableRange<float>{10.0f, 32000.0f, 1.0f, 0.4f}, 150.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetRelease(v);
         });
         layout.add(std::move(p));
@@ -128,7 +124,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderFreqBegin, 1},
                                                              id::kChannelVocoderFreqBegin, 20.0f, 2000.0f, 40.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetFreqBegin(v);
         });
         layout.add(std::move(p));
@@ -137,7 +132,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderFreqEnd, 1},
                                                              id::kChannelVocoderFreqEnd, 4000.0f, 18000.0f, 12000.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetFreqEnd(v);
         });
         layout.add(std::move(p));
@@ -149,7 +143,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
                                            green_vocoder::dsp::ChannelVocoder::kMaxOrder, 4),
             20);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetNumBands(static_cast<int>(std::round(v)));
         });
         layout.add(std::move(p));
@@ -158,7 +151,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderScale, 1},
                                                              id::kChannelVocoderScale, 0.1f, 2.0f, 1.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetModulatorScale(v);
         });
         layout.add(std::move(p));
@@ -167,7 +159,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderRipple, 1},
                                                              id::kChannelVocoderRipple, 0.1f, 10.0f, 1.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetFilterRipple(v);
         });
         layout.add(std::move(p));
@@ -176,7 +167,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kChannelVocoderCarryScale, 1},
                                                              id::kChannelVocoderCarryScale, 0.1f, 2.0f, 1.0f);
         paramListeners_.Add(p, [this](float v) {
-            juce::ScopedLock _{getCallbackLock()};
             channel_vocoder_.SetCarryScale(v);
         });
         layout.add(std::move(p));
@@ -200,7 +190,7 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
     {
         auto p =
             std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{id::kLPCSmooth, 1}, id::kLPCSmooth,
-                                                        juce::NormalisableRange<float>{1.0f, 50.0f, 0.1f, 0.4f}, 1.0f);
+                                                        juce::NormalisableRange<float>{0.0f, 50.0f, 0.1f, 0.4f}, 1.0f);
         paramListeners_.Add(p, [this](float l) {
             burg_lpc_.SetSmooth(l);
             block_burg_lpc_.SetSmear(l);
@@ -229,13 +219,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             juce::ParameterID{id::kLPCGainRelease, 1}, id::kLPCGainRelease,
             juce::NormalisableRange<float>{5.0f, 200.0f, 1.0f, 0.4f}, 20.0f);
         paramListeners_.Add(p, [this](float l) { burg_lpc_.SetGainRelease(l); });
-        layout.add(std::move(p));
-    }
-    {
-        auto p = std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{id::kLPCDicimate, 1}, id::kLPCDicimate,
-                                                              juce::StringArray{"Full", "Legacy", "Bitcrush"}, 0);
-        paramListeners_.Add(
-            p, [this](int l) { burg_lpc_.SetQuality(static_cast<green_vocoder::dsp::LeakyBurgLPC::Quality>(l)); });
         layout.add(std::move(p));
     }
     {

@@ -13,8 +13,6 @@ BurgLPC::BurgLPC(AudioPluginAudioProcessor& processor)
     addAndMakeVisible(forget_);
     smear_.BindParam(apvts, id::kLPCSmooth);
     addAndMakeVisible(smear_);
-    dicimate_.BindParam(apvts, id::kLPCDicimate);
-    addAndMakeVisible(dicimate_);
     order_.BindParam(apvts, id::kLPCOrder);
     addAndMakeVisible(order_);
     attack_.BindParam(apvts, id::kLPCGainAttack);
@@ -36,17 +34,15 @@ void BurgLPC::resized() {
         auto top = b.removeFromTop(65);
         forget_.setBounds(top.removeFromLeft(50));
         smear_.setBounds(top.removeFromLeft(50));
-        auto block = top.removeFromLeft(100);
-        dicimate_.setBounds(block.removeFromTop(30));
-        order_.setBounds(block);
+        auto block = top.removeFromLeft(60);
+        order_.setBounds(block.withHeight(40));
         attack_.setBounds(top.removeFromLeft(50));
         hold_.setBounds(top.removeFromLeft(50));
         release_.setBounds(top.removeFromLeft(50));
     }
     else {
-        auto top = b.removeFromLeft(100).withHeight(65);
-        block_size_.setBounds(top.removeFromTop(30));
-        order_.setBounds(top);
+        block_size_.setBounds(b.removeFromLeft(80).withHeight(65).withSizeKeepingCentre(80, 35).reduced(2));
+        order_.setBounds(b.removeFromLeft(80).withHeight(40).reduced(2));
         auto block = b.removeFromTop(65);
         smear_.setBounds(block.removeFromLeft(50));
         attack_.setBounds(block.removeFromLeft(50));
@@ -60,7 +56,6 @@ void BurgLPC::SetBlockMode(bool block_mode) {
 
 void BurgLPC::MakeGui() {
     forget_.setVisible(!block_mode_);
-    dicimate_.setVisible(!block_mode_);
     release_.setVisible(!block_mode_);
     hold_.setVisible(!block_mode_);
     block_size_.setVisible(block_mode_);

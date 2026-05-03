@@ -42,8 +42,8 @@ void Vocoder::resized() {
     title_.setBounds(b.removeFromTop(20));
 
     auto top = b.removeFromTop(30);
-    shift_pitch_.setBounds(top.removeFromLeft(150));
-    vocoder_type_.setBounds(top.removeFromLeft(150));
+    shift_pitch_.setBounds(top.removeFromLeft(150).reduced(2));
+    vocoder_type_.setBounds(top.removeFromLeft(150).reduced(2));
 
     burg_->setBounds(b);
     channel_->setBounds(b);
