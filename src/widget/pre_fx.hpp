@@ -11,8 +11,6 @@ public:
 private:
     juce::Label title_{"", "pre fx"};
     ui::Dial tilt_{"tilt"};
-    ui::Switch saturation_{"clip", "bypass"};
-    ui::Dial drive_{"drive"};
     ui::FlatCombobox main_route_;
     ui::FlatCombobox side_route_;
 };

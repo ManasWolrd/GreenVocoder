@@ -68,7 +68,6 @@ static constexpr auto kEnsembleRate = "ens_rate";
 static constexpr auto kEnsembleSpread = "ens_spread";
 static constexpr auto kEnsembleMix = "ens_mix";
 static constexpr auto kEnsembleNumVoices = "ens_num_voices";
-static constexpr auto kEnsembleMode = "ens_mode";
 
 static constexpr auto kChannelVocoderNBands = "cv_nbands";
 static constexpr auto kChannelVocoderFreqBegin = "cv_fbegin";

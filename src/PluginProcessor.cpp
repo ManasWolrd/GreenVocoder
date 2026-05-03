@@ -342,15 +342,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
         paramListeners_.Add(p, [this](float rate) { ensemble_.SetRate(rate); });
         layout.add(std::move(p));
     }
-    {
-        auto p = std::make_unique<juce::AudioParameterChoice>(juce::ParameterID{id::kEnsembleMode, 1},
-                                                              id::kEnsembleMode, juce::StringArray{"sine", "noise"}, 0);
-        paramListeners_.Add(p, [this](int mode) {
-            juce::ScopedLock _{getCallbackLock()};
-            ensemble_.SetMode(static_cast<green_vocoder::dsp::Ensemble::Mode>(mode));
-        });
-        layout.add(std::move(p));
-    }
 
     // pitch tracking
     {
@@ -394,23 +385,6 @@ AudioPluginAudioProcessor::AudioPluginAudioProcessor()
             juce::ParameterID{id::kTrackingGlide, 1}, id::kTrackingGlide,
             juce::NormalisableRange<float>{1.0f, 1000.0f, 1.0f, 0.4f}, 1.0f);
         paramListeners_.Add(p, [this](float bw) { pitch_glide_.MakeFilter(bw * getSampleRate() / 1000.0f); });
-        layout.add(std::move(p));
-    }
-
-    {
-        auto p = std::make_unique<juce::AudioParameterFloat>(juce::ParameterID{"output_drive", 1}, "output_drive",
-                                                             -40.0f, 40.0f, 0.0f);
-        output_drive_ = p.get();
-        layout.add(std::move(p));
-    }
-    {
-        auto p = std::make_unique<juce::AudioParameterBool>(juce::ParameterID{"output_saturation", 1},
-                                                            "output_saturation", false);
-        paramListeners_.Add(p, [this](bool saturation) {
-            juce::ignoreUnused(saturation);
-            output_driver_.Reset();
-        });
-        output_saturation_ = p.get();
         layout.add(std::move(p));
     }
 
@@ -502,7 +476,6 @@ void AudioPluginAudioProcessor::prepareToPlay(double sampleRate, int samplesPerB
     first_init_ = true;
 
     pre_tilt_filter_.Reset();
-    output_driver_.Reset();
 
     paramListeners_.MarkAll();
 }
@@ -707,26 +680,11 @@ void AudioPluginAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer, j
                 break;
         }
 
-        // saturation and ensemble
-        float const output_gain = qwqdsp::convert::Db2Gain(output_drive_->get());
-        if (!output_saturation_->get()) {
-            ensemble_.Process(crossing_main_buffer_.data(), num_process);
-            for (size_t i = 0; i < num_process; ++i) {
-                auto x = crossing_main_buffer_[i] * output_gain;
-                main_buffer_left[i] = x[0];
-                main_buffer_right[i] = x[1];
-            }
-        }
-        else {
-            for (size_t i = 0; i < num_process; ++i) {
-                crossing_main_buffer_[i] = output_driver_.ADAA(crossing_main_buffer_[i] * output_gain);
-            }
-            ensemble_.Process(crossing_main_buffer_.data(), num_process);
-            for (size_t i = 0; i < num_process; ++i) {
-                auto const& x = crossing_main_buffer_[i];
-                main_buffer_left[i] = x[0];
-                main_buffer_right[i] = x[1];
-            }
+        ensemble_.Process(crossing_main_buffer_.data(), num_process);
+        for (size_t i = 0; i < num_process; ++i) {
+            auto const& x = crossing_main_buffer_[i];
+            main_buffer_left[i] = x[0];
+            main_buffer_right[i] = x[1];
         }
         main_buffer_left += num_process;
         main_buffer_right += num_process;

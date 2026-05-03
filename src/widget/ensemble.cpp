@@ -23,9 +23,6 @@ Ensemble::Ensemble(AudioPluginAudioProcessor& p) {
 
     rate_.BindParam(apvts, id::kEnsembleRate);
     addAndMakeVisible(rate_);
-
-    mode_.BindParam(apvts, id::kEnsembleMode);
-    addAndMakeVisible(mode_);
 }
 
 void Ensemble::resized() {
@@ -33,8 +30,7 @@ void Ensemble::resized() {
     title_.setBounds(b.removeFromTop(20));
 
     auto block = b.removeFromLeft(70);
-    mode_.setBounds(block.removeFromBottom(25));
-    num_voice_.setBounds(block);
+    num_voice_.setBounds(block.withHeight(40));
 
     auto dials = b.removeFromTop(65);
     detune_.setBounds(dials.removeFromLeft(50));

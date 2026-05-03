@@ -102,10 +102,6 @@ public:
     qwqdsp_filter::FastSetIirParalle<qwqdsp_filter::fastset_coeff::Order2_1e7> pitch_glide_;
     bool first_init_{};
 
-    juce::AudioParameterBool* output_saturation_;
-    juce::AudioParameterFloat* output_drive_;
-    qwqdsp_simd_element::AlgebraicWaveshaper<2> output_driver_;
-
     int old_latency_{};
     std::atomic<int> latency_{};
 

@@ -15,18 +15,12 @@ public:
     static constexpr float kMaxTime = 50.0f;
     static constexpr float kMinTime = 15.0f;
 
-    enum class Mode {
-        Sine,
-        Noise,
-    };
-
     void Init(float sample_rate);
     void SetNumVoices(int num_voices);
     void SetDetune(float pitch);
     void SetRate(float rate);
     void SetSperead(float spread);
     void SetMix(float mix);
-    void SetMode(Mode mode);
     void Process(qwqdsp_simd_element::PackFloat<2>* main, size_t num_samples);
 private:
     void CalcCurrDelayLen();
@@ -36,7 +30,6 @@ private:
     float mix_{};
     float rate_{};
     float detune_{};
-    Mode mode_{};
 
     float lfo_freq_{};
     float sample_rate_{};

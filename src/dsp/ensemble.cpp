@@ -79,82 +79,42 @@ void Ensemble::SetRate(float rate) {
     CalcCurrDelayLen();
 }
 
-void Ensemble::SetMode(Ensemble::Mode mode) {
-    mode_ = mode;
-}
-
 void Ensemble::Process(qwqdsp_simd_element::PackFloat<2>* main, size_t num_samples) {
     if (num_voices_ == 0) return;
 
     const auto& pans = kPanTable[static_cast<size_t>(num_voices_) - 2];
     delay_.WarpBuffer();
 
-    if (mode_ == Mode::Sine) {
-        const float phase_add = 1.0f / static_cast<float>(num_voices_);
-        for (size_t i = 0; i < num_samples; ++i) {
-            auto x = main[i];
-            delay_.Push(x[0], x[1]);
+    const float phase_add = 1.0f / static_cast<float>(num_voices_);
+    for (size_t i = 0; i < num_samples; ++i) {
+        auto x = main[i];
+        delay_.Push(x[0], x[1]);
 
-            float wet_left = 0.0f;
-            float wet_right = 0.0f;
-            float current_delay_line = delay_samples_smoother_.Tick(current_delay_len_);
-            for (int voice = 0; voice < num_voices_; voice += 4) {
-                qwqdsp_simd_element::PackInt32<4> mul{
-                    voice, voice + 1, voice + 2, voice + 3
-                };
-                auto voice_phase = mul.ToFloat() * phase_add + lfo_phase_;
-                voice_phase = qwqdsp_simd_element::PackOps::Frac(voice_phase);
-                auto sin = qwqdsp_simd_element::PackOps::Cos(voice_phase * std::numbers::pi_v<float> * 2.0f);
-                sin = sin * 0.5f + 0.5f;
-                auto delay = sin * current_delay_line;
-                auto v = delay_.GetAfterPush(delay);
-                qwqdsp_simd_element::PackFloat<4> pan{
-                    pans[static_cast<uint32_t>(voice)], pans[static_cast<uint32_t>(voice + 1)], pans[static_cast<uint32_t>(voice + 2)], pans[static_cast<uint32_t>(voice + 3)]
-                };
-                pan *= spread_;
-                wet_left += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f - pan) / 2.0f);
-                wet_right += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f + pan) / 2.0f);
-            }
-            qwqdsp_simd_element::PackFloat<2> wet{wet_left, wet_right};
-            main[i] = qwqdsp_simd_element::PackOps::Lerp(main[i], wet, mix_);
-
-            lfo_phase_ += lfo_freq_;
-            lfo_phase_ -= std::floor(lfo_phase_);
+        float wet_left = 0.0f;
+        float wet_right = 0.0f;
+        float current_delay_line = delay_samples_smoother_.Tick(current_delay_len_);
+        for (int voice = 0; voice < num_voices_; voice += 4) {
+            qwqdsp_simd_element::PackInt32<4> mul{
+                voice, voice + 1, voice + 2, voice + 3
+            };
+            auto voice_phase = mul.ToFloat() * phase_add + lfo_phase_;
+            voice_phase = qwqdsp_simd_element::PackOps::Frac(voice_phase);
+            auto sin = qwqdsp_simd_element::PackOps::Cos(voice_phase * std::numbers::pi_v<float> * 2.0f);
+            sin = sin * 0.5f + 0.5f;
+            auto delay = sin * current_delay_line;
+            auto v = delay_.GetAfterPush(delay);
+            qwqdsp_simd_element::PackFloat<4> pan{
+                pans[static_cast<uint32_t>(voice)], pans[static_cast<uint32_t>(voice + 1)], pans[static_cast<uint32_t>(voice + 2)], pans[static_cast<uint32_t>(voice + 3)]
+            };
+            pan *= spread_;
+            wet_left += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f - pan) / 2.0f);
+            wet_right += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f + pan) / 2.0f);
         }
-    }
-    else if (mode_ == Mode::Noise) {
-        for (size_t i = 0; i < num_samples; ++i) {
-            auto x = main[i];
-            delay_.Push(x[0], x[1]);
+        qwqdsp_simd_element::PackFloat<2> wet{wet_left, wet_right};
+        main[i] = qwqdsp_simd_element::PackOps::Lerp(main[i], wet, mix_);
 
-            float wet_left = 0.0f;
-            float wet_right = 0.0f;
-            float current_delay_line = delay_samples_smoother_.Tick(current_delay_len_);
-            size_t noise_idx = 0;
-            for (int voice = 0; voice < num_voices_; voice += 4) {
-                qwqdsp_simd_element::PackFloat<4> norm_len{
-                    noises_[noise_idx].Tick(),
-                    noises_[noise_idx].Tick(),
-                    noises_[noise_idx + 1].Tick(),
-                    noises_[noise_idx + 1].Tick()
-                };
-                noise_idx += 2;
-                norm_len = norm_len * 0.5f + 0.5f;
-                auto delay = norm_len * current_delay_line;
-                auto v = delay_.GetAfterPush(delay);
-                qwqdsp_simd_element::PackFloat<4> pan{
-                    pans[static_cast<uint32_t>(voice)], pans[static_cast<uint32_t>(voice + 1)], pans[static_cast<uint32_t>(voice + 2)], pans[static_cast<uint32_t>(voice + 3)]
-                };
-                pan *= spread_;
-                wet_left += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f - pan) / 2.0f);
-                wet_right += qwqdsp_simd_element::PackOps::ReduceAdd(v * (1.0f + pan) / 2.0f);
-            }
-            qwqdsp_simd_element::PackFloat<2> wet{wet_left, wet_right};
-            main[i] = qwqdsp_simd_element::PackOps::Lerp(main[i], wet, mix_);
-    
-            lfo_phase_ += lfo_freq_;
-            lfo_phase_ -= std::floor(lfo_phase_);
-        }
+        lfo_phase_ += lfo_freq_;
+        lfo_phase_ -= std::floor(lfo_phase_);
     }
 }
 

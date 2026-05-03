@@ -13,10 +13,6 @@ PreFx::PreFx(AudioPluginAudioProcessor& p) {
     addAndMakeVisible(main_route_);
     side_route_.BindParam(apvts, id::kSideChannelConfig);
     addAndMakeVisible(side_route_);
-    saturation_.BindParam(p.output_saturation_);
-    addAndMakeVisible(saturation_);
-    drive_.BindParam(p.output_drive_);
-    addAndMakeVisible(drive_);
 }
 
 void PreFx::resized() {
@@ -28,8 +24,5 @@ void PreFx::resized() {
     side_route_.setBounds(channel_bound);
 
     tilt_.setBounds(b.removeFromLeft(50).withHeight(65));
-
-    saturation_.setBounds(b.removeFromLeft(50).withHeight(30));
-    drive_.setBounds(b.removeFromLeft(50));
 }
 }

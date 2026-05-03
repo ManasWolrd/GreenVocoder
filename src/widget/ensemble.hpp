@@ -16,7 +16,6 @@ private:
     ui::Dial spread_{"spread"};
     ui::Dial mix_{"mix"};
     ui::Dial rate_{"rate"};
-    ui::FlatCombobox mode_;
 };
 
 }
