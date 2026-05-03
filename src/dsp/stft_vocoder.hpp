@@ -4,7 +4,7 @@
 
 #include <qwqdsp/simd_element/simd_pack.hpp>
 #include <qwqdsp/spectral/complex_fft.hpp>
-#include "AudioFFT/AudioFFT.h"
+#include "AudioFFT.h"
 
 namespace green_vocoder::dsp {
 
